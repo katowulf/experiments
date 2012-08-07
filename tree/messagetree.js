@@ -193,7 +193,7 @@
    };
 
    function Trick(state, length, percent, config) {
-      
+
    }
 
    function Trick.prototype.run(leaf) {
