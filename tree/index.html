@@ -6,18 +6,18 @@
     <style type="text/css">
         #tree {
            position: absolute;
-           top: 100px;
-           left: 50px;
-           width: 250px;
-           height: 100px;
+           top: 0;
+           left: 10px;
+           /*width: 734px;*/
+           height: 500px;
            background-color: #eee;
         }
 
         #ground {
             position: absolute;
             top: 500px;
-            left: 250px;
-            width: 300px;
+            left: 10%;
+            width: 80%;
             height: 25px;
             background-color: #aaa;
         }
@@ -25,9 +25,16 @@
         .leaf {
             position: absolute;
         }
+
+       #pos {
+          position: absolute;
+          top: 0;
+          right: 0;
+       }
     </style>
     <script type="text/javascript" src="http://code.jquery.com/jquery-1.7.2.js"></script>
     <script type="text/javascript" src="jquery-ui-1.8.22.custom.min.js"></script>
+    <script type="text/javascript" src="jquery.sequence.js"></script>
     <script type="text/javascript" src="jquery.qtransform.js"></script>
     <script type="text/javascript" src="jquery.path.js"></script>
     <script type="text/javascript" src="messagetree.js"></script>
@@ -47,7 +54,7 @@
 </head>
 <body>
 
-<div id="tree"></div>
+<img id="tree" src="tree.png" />
 
 <div id="ground"></div>
 

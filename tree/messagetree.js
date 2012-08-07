@@ -51,10 +51,6 @@
       this.$e = _leafElement(config).appendTo('body').offset(startPoint).click(function() {
          tree.leafClicked(self);
       });
-      this.launchPoint  = startPoint;
-      this.currStep     = 0;
-      this.tricks       = null;
-      this.pause        = $.Deferred().resolve();
    }
 
    Leaf.prototype.shake = function(state) {
@@ -79,35 +75,6 @@
       //todo
       //todo
    };
-
-   Leaf.prototype.pause = function() {
-      if( !this.isPaused() ) {
-         console.log('pause', this.id);
-         this.pause = $.Deferred();
-      }
-   };
-
-   Leaf.prototype.unpause = function() {
-      if( this.isPaused() ) {
-         console.log('unpause', this.id);
-         this.pause.resolve();
-      }
-   };
-
-   Leaf.prototype.fall = function(tricks) {
-      //todo make this return a promise
-      var self = this;
-      self.tricks = tricks;
-      console.log('falling leaf ', this.id);
-      //todo
-      //todo use promises to run tricks
-      //todo handle pause and unpause
-      //todo notify Tree when completely fallen
-   };
-
-   Leaf.prototype.isFalling = function() { return this.tricks !== null && this.tricks.length; };
-   Leaf.prototype.isFallen  = function() { return this.tricks !== null && !this.tricks.length; };
-   Leaf.prototype.isPaused  = function() { return !this.pause.isResolved(); };
 
    Leaf.prototype.dispose = function() {
       console.log('disposing leaf', this.id);
@@ -158,7 +125,7 @@
       if( idx >= 0 ) {
          this.hangingLeaves.splice(idx, 1);
          this.fallenLeaves.push(leaf);
-         leaf.fall(buildTricks(this.upcomingRounds, this.config.stepsMin));
+         buildTricks(this.upcomingRounds, this.config.stepsMin, leaf).run();
       }
    };
 
