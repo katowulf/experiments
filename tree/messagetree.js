@@ -24,16 +24,16 @@
             gusts:     .25
          },
          states: {
-            calm: ['float', 'rock', 'rise'],
-            rise: ['float', 'flip', 'spin', 'jump'],
-            fall: ['float', 'drop', 'spin', 'flip'],
-            gust: ['sine', 'flip', 'spin', 'shoot', 'skip']
+            calm: ['float', 'flip', 'drop'],
+            rise: ['float', 'spin', 'jump'],
+            fall: ['float', 'drop', 'spin'],
+            gust: ['spin',  'shoot', 'skip', 'jump']
          },
          ending: {
             calm: ['landingSoft'],
             rise: ['landBump', 'landSkip'],
             fall: ['landBump', 'landSkip', 'landSoft'],
-            gust: ['landSkip', 'landCaught', 'landBounce']
+            gust: ['landBounce', 'landWheel']
          }
       },
       leaf: {
@@ -51,6 +51,10 @@
       this.$e = _leafElement(config).appendTo('body').offset(startPoint).click(function() {
          tree.leafClicked(self);
       });
+      this.falling = false;
+      this.fallen = false;
+      this.showing = false;
+      this.paused = $.Deferred().resolve(); // a placeholder so we don't have to if( paused ) everywhere
    }
 
    Leaf.prototype.shake = function(state) {
@@ -62,6 +66,7 @@
 
    Leaf.prototype.showMessage = function() {
       this.pause();
+      this.showing = true;
       console.log('showMessage', this.id);
       //todo
       //todo
@@ -70,6 +75,7 @@
 
    Leaf.prototype.hideMessage = function() {
       this.unpause();
+      this.showing = false;
       console.log('hideMessage', this.id);
       //todo
       //todo
@@ -120,26 +126,27 @@
    };
 
    Tree.prototype.dropLeaf = function(leaf) {
-      console.log('dropping leaf: ', leaf.id, leaf.isFalling(), leaf.isFallen());
-      var idx = $.indexOf(leaf, this.hangingLeaves);
+      console.log('dropping leaf: ', leaf.id, leaf.falling, leaf.fallen);
+      var idx = $.inArray(leaf, this.hangingLeaves);
       if( idx >= 0 ) {
          this.hangingLeaves.splice(idx, 1);
          this.fallenLeaves.push(leaf);
-         buildTricks(this.upcomingRounds, this.config.stepsMin, leaf).run();
+         applyTricks(this.upcomingRounds, this.config.stepsMin, leaf)
+               .fail(function(e) { console.error(e); });
       }
    };
 
    Tree.prototype.leafClicked = function(leaf) {
       console.log('leafClicked', leaf.id);
-      if( leaf.isFalling() ) {
-         if( leaf.isPaused() ) {
+      if( leaf.falling || leaf.fallen ) {
+         if( leaf.showing ) {
             leaf.hideMessage();
          }
          else {
             leaf.showMessage();
          }
       }
-      else if( !leaf.isFallen() ) {
+      else {
          this.dropLeaf(leaf);
       }
    };
@@ -160,21 +167,39 @@
    };
 
    function Trick(state, length, percent, config) {
-
+      //todo
+      //todo
+      //todo
    }
 
-   function Trick.prototype.run(leaf) {
+   Trick.prototype.run = function(leaf) {
       return $.Deferred(function(def) {
          //todo
          //todo
          //todo
          //todo
          //todo
+         var off = leaf.$e.offset();
+         var path = {
+            start: {
+               x: off.left,
+               y: off.top,
+               angle: 25
+            },
+            end: {
+               x:150+_rand(800),
+               y: 445+_rand(10),
+               angle: -30,
+               length: 1
+            }
+         };
          leaf.$e.animate({
-
-         }, {duration: 1000});
+            path: new $.path.bezier(path),
+            scale:.8,
+            rotate: _rand(10)
+         }, {duration: 3000, complete: def.resolve});
       });
-   }
+   };
 
    function _box($e) {
       var off = $e.offset(), w = $e.outerWidth(), h = $e.outerHeight();
@@ -198,8 +223,9 @@
    }
 
    function _start(config, i) {
-      console.log('start', {top: config.start.top, left: config.start.left + i*25}, i);
-      return {top: config.start.top, left: config.start.left + i*50}; //todo
+      var conf = {top: config.start.top+125+i*25, left: config.start.left + 125 + i*100};
+      console.log('start', conf, i);
+      return conf; //todo
    }
 
    function _leafElement(config) {
@@ -220,12 +246,24 @@
       return Math.floor(Math.random() * (max - min + 1)) + min;
    }
 
-   function buildTricks(rounds, min) {
-      var i=-1, max = _rand(min, rounds.length-1), tricks = [];
+   function applyTricks(rounds, min, leaf) {
+      var i=-1, max = _rand(min, rounds.length-1);
+      var def = $.Deferred().resolve();
+      max = 1; //debug
       while(++i < max) {
-         tricks.push(rounds[i].getTrick((i+1)/max));
+         def = def.pipe(deferTrick(rounds[i], i, max, leaf));
       }
-      return tricks;
+      def.always(function() {
+         leaf.fallen = true;
+         leaf.falling = false;
+      });
+      return def.promise();
+   }
+
+   function deferTrick(round, idx, end, leaf) {
+      return function() {
+         return leaf.paused.then(round.getTrick().run(leaf, idx, end));
+      }
    }
 
 })(jQuery);
