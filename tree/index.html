@@ -1,7 +1,7 @@
-<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
-        "http://www.w3.org/TR/html4/loose.dtd">
+<!DOCTYPE html>
 <html>
 <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
     <title>Falling Leaf</title>
     <style type="text/css">
         #tree {
@@ -11,6 +11,7 @@
            /*width: 734px;*/
            height: 500px;
            background-color: #eee;
+           border: 1px solid gray;
         }
 
         #ground {
@@ -31,9 +32,24 @@
           bottom: 5px;
           right: 5px;
        }
+
+       .marker, .marker-big {
+           width: 1px;
+           height: 1px;
+           background-color: red;
+           opacity: .3;
+           position: absolute;
+       }
+
+        .marker-big {
+            width: 10px;
+            height: 10px;
+        }
     </style>
+    <script type="text/javascript" src="underscore.js"></script>
     <script type="text/javascript" src="http://code.jquery.com/jquery-1.7.2.js"></script>
     <script type="text/javascript" src="jquery-ui-1.8.22.custom.min.js"></script>
+    <script type="text/javascript" src="jQueryRotate.2.2.js"></script>
     <script type="text/javascript" src="jquery.sequence.js"></script>
     <script type="text/javascript" src="jquery.qtransform.js"></script>
     <script type="text/javascript" src="jquery.path.js"></script>
@@ -43,11 +59,25 @@
         console.log(jQuery.easing);
 
         jQuery(function($) {
-            $('#tree').tree('#ground');
+            var $pos = $('#pos');
+            var $tree = $('#tree');
 
-            $(document).on('mousemove', function(e) {
-                $('#pos').text('x: '+e.pageX+', y:'+ e.pageY);
+            $tree.tree('#ground', {
+                stems: [
+                    [212, 55]
+                ]
             });
+
+            $tree.on('mousemove', function(e) {
+               var off = distanceTo($tree, {top:e.pageY, left:e.pageX});
+               $pos.text('x: '+Math.round(off.left)+', y:'+ Math.round(off.top));
+            });
+
+            function distanceTo($e, coords) {
+                var base = $e.offset();
+                return {left: coords.left - base.left, top: coords.top - base.top };
+            }
+
         });
 
     </script>
