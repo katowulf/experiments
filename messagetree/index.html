@@ -1,17 +1,28 @@
 <html>
 <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
    <title>Message Tree</title>
    <script type="text/javascript" src="http://code.jquery.com/jquery-1.7.2.js"></script>
+   <script type="text/javascript" src="sprintf.js"></script>
    <script type="text/javascript" src="raphael.2.1.js"></script>
    <script type="text/javascript" src="app.js"></script>
    <style type="text/css">
-      #canvas_container {
+      #paper {
          width: 500px;
          border: 1px solid #aaa;
       }
+
+       .marker {
+           background-color: red;
+           width: 3px;
+           height: 3px;
+           position: absolute;
+           z-index: 500;
+       }
    </style>
 </head>
 <body>
-<div id="canvas_container"></div>
+<div id="paper"></div>
+<div id="log"></div>
 </body>
 </html>

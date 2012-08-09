@@ -51,7 +51,7 @@
 
           $('#src, #x, #y, #json').on('keypress keyup blur change', makeRelative);
 
-          $('#out').on('focus', function() { $(this).select(); });
+          $('#out, #src').on('focus', function() { $(this).select(); });
 
           // set up our clipboard
           ZeroClipboard.setMoviePath( 'zeroclip/ZeroClipboard.swf' );
