@@ -1,0 +1,92 @@
+<html>
+<head>
+   <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <title>Convert Paths</title>
+   <script type="text/javascript" src="http://code.jquery.com/jquery-1.7.2.js"></script>
+   <script type="text/javascript" src="raphael.2.1.js"></script>
+   <script type="text/javascript" src="zeroclip/ZeroClipboard.js"></script>
+    <style type="text/css">
+        #sample {
+            width: 500px;
+            height: 500px;
+            border: 1px solid #aaa;
+            float: left;
+        }
+
+        #leftcol { float: left; }
+
+       label { display: block; margin: 5px; clear: both; }
+       label input[type=text], label textarea { display: block; }
+
+
+    </style>
+    <script type="text/javascript">
+       jQuery(function($) {
+          var sample, paper = Raphael('sample', 800, 500);
+
+          function makeRelative() {
+             var src = $('#src').val(), rel = Raphael.pathToRelative(src), x = $('#x').val(), y = $('#y').val(), json = $('#json:checked').length;
+             if(x.length || y.length) {
+                rel[0][1] = ~~x;
+                rel[0][2] = ~~y;
+             }
+
+             var path;
+             if( json ) {
+                path = JSON.stringify(rel);
+             }
+             else {
+                path = $.map(rel, function(val, i) {
+                   return val[0]+' '+ $.map(val.slice(1), function(val, i) {
+                      return i%2? val+' ' : val+',';
+                   }).join('');
+                }).join(' ');
+             }
+             sample && sample.remove();
+             sample = paper.path(path);
+
+             $('#out').val(path);
+             zeroClipWidget.setText(path);
+          }
+
+          $('#src, #x, #y, #json').on('keypress keyup blur change', makeRelative);
+
+          $('#out').on('focus', function() { $(this).select(); });
+
+          // set up our clipboard
+          ZeroClipboard.setMoviePath( 'zeroclip/ZeroClipboard.swf' );
+          var zeroClipWidget = new ZeroClipboard.Client();
+          zeroClipWidget.setHandCursor( true );
+
+          // glue our code copy button to the page
+          zeroClipWidget.glue( 'clippy' );
+
+          $(window).on('resize', function() {
+             zeroClipWidget.reposition();
+          });
+
+          if( $('#src').val()) { $('#src').blur(); }
+       });
+    </script>
+</head>
+<body>
+
+<div id="leftcol">
+   <label>Path String
+      <textarea id="src" rows=5 cols=50></textarea>
+   </label>
+   <label>X position: <input type="text" size="5" id="x" /></label>
+   <label>Y position: <input type="text" size="5" id="y" /></label>
+   <label>
+      <input type="checkbox" id="json" value=1 />
+      as JSON
+   </label>
+   <label>Output:<a id="clippy" href="#"></a>
+      <textarea id="out" rows=5 cols=50></textarea>
+   </label>
+</div>
+
+<div id="sample"></div>
+</body>
+</html>
+
