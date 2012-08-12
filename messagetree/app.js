@@ -69,6 +69,17 @@ jQuery(function($) {
       return {fill: color.toGrad()};
    };
 
+   PAPER.customAttributes.wiggle = function(num) {
+      if( num === 0 ) { return {}; }
+      else {
+         //todo
+         //todo
+         //todo
+         //todo
+         //todo return {transform: ???}
+      }
+   };
+
    /** TREE: a tree graphic and canvas element
     ******************************************************************/
 
@@ -100,7 +111,6 @@ jQuery(function($) {
       //todo
       //todo
       //todo
-      var attr, leaf, trx, min = wind.strength*-90, max = wind.strength*90; //todo
       console.time('applyWind'); //debug
       var leaves = this.leaves, len = leaves.length, i = len, complete = 0;
 
@@ -241,8 +251,10 @@ jQuery(function($) {
          var self = this;
          return $.Deferred(function(def) {
             // leaf is attached, so it shudders
-            var count = 1; //rand(round(wind.duration/wind.strength*10), round(wind.duration/wind.strength*10));
-            var i = count, min = round(wind.strength * 10), max = round(wind.strength * 10 + wind.strength * 20);
+            //todo
+            var count = 20;//rand(Math.floor(wind.strength*30), Math.floor(wind.strength*60));
+            console.log('count', count);
+            var i = count, min = -20, max = 20; //todo
             var tr = self.transformation, graphic = self.graphic();
             var pipe = $.Deferred().resolve();
             var duration = 500; //Math.floor(wind.duration/count/2);
@@ -269,11 +281,14 @@ jQuery(function($) {
             //todo
             //todo this works though : (
             var props = self.transformation.orig;
-            self.graphic().animate({transform: 'S'+props.scaleX+','+props.scaleY+','+','+props.x+','+props.y+' R'+(props.angle-10)+','+props.x+','+props.y}, wind.duration, 'elastic', function() {
-               self.graphic().animate({transform: 'S'+props.scaleX+','+props.scaleY+','+','+props.x+','+props.y+' R'+(props.angle+20)+','+props.x+','+props.y}, wind.duration, 'elastic', function() {
-                  self.graphic().animate({transform: 'S'+props.scaleX+','+props.scaleY+','+','+props.x+','+props.y+' R'+(props.angle-10)+','+props.x+','+props.y}, wind.duration, 'elastic', def.resolve);
-               });
-            });
+            (function recurseAnimate() {
+               if( i-- ) {
+                  self.graphic().animate({transform: 'S'+props.scaleX+','+props.scaleY+','+','+props.x+','+props.y+' R'+(props.angle-rand(min, max))+','+props.x+','+props.y}, wind.duration, 'elastic', recurseAnimate);
+               }
+               else {
+                  self.graphic().animate({transform: 'S'+props.scaleX+','+props.scaleY+','+','+props.x+','+props.y+' R'+props.angle+','+props.x+','+props.y}, wind.duration, 'elastic');
+               }
+            })();
          });
       }
       else {
@@ -473,14 +488,14 @@ jQuery(function($) {
       TREE.addLeaf();
    }
 
-   // animate the leaves
+   //animate the leaves
       TREE.changeSeason(['-='+Color.defaults.run, 1], 8000, function() {
          //TREE.applyWind(new Wind(.5, 1000));
       });
 
    setTimeout(function() {
-      TREE.applyWind(new Wind(.5, 250));
-   }, 4000);
+      TREE.applyWind(new Wind(1, 50));
+   }, 1500);
 
 //   var shiftInterval = setInterval(shiftHue, 10);
 
