@@ -35,7 +35,7 @@ jQuery(function($) {
       blade: {
          stroke: 'none',
          'fill-opacity': .9,
-         hue: function() { return [rand.apply(null, Color.defaults.hue), rand.apply(null, Color.defaults.sat)] }
+         season: function() { return [rand.apply(null, Color.defaults.hue), rand.apply(null, Color.defaults.sat)] }
       },
       stem: {
          fill: '0-#967F6A-#42280A',
@@ -57,27 +57,16 @@ jQuery(function($) {
     * @param {number} h between 0 and 1
     * @return {Object}
     */
-   PAPER.customAttributes.hue = function(h, s, l) { //todo rename to color?
+   PAPER.customAttributes.season = function(h, s, l) { //todo rename to color?
       var color = this.data('Color');
-      if( !color ) {
-         color = new Color(h, s, l);
-         this.data('Color', new Color(h, s, l));
-      }
-      else {
-         color = color.shiftHue(h, s, l);
-      }
+      color = color.shiftHue(h, s, l);
       return {fill: color.toGrad()};
    };
 
-   PAPER.customAttributes.wiggle = function(num) {
-      if( num === 0 ) { return {}; }
-      else {
-         //todo
-         //todo
-         //todo
-         //todo
-         //todo return {transform: ???}
-      }
+   PAPER.customAttributes.wind = function(step, magnitude) {
+//      var tr = this.data('Transformation');
+//      tr.rotate( Math.sin( step ) / 2 );
+      console.log('wind', step, magnitude);
    };
 
    /** TREE: a tree graphic and canvas element
@@ -165,7 +154,8 @@ jQuery(function($) {
          leaf = leaves[i];
          attr = _adjustHueArray(args.attr, leaf.color.base);
          console.log('animating', leaf.id, attr);
-         leaf.graphic('blade').animate({hue: attr}, args.duration, checkComplete);
+         //todo should Tree be modifying Leaf's graphic directly? Coupled, but what alternatives aren't silly?
+         leaf.graphic('blade').animate({season: attr}, args.duration, checkComplete);
       }
       return this;
    };
@@ -177,27 +167,20 @@ jQuery(function($) {
    function Leaf(paper, attributes) {
       var idNumber = Leaf.counter++;
       this.id = 'leaf'+idNumber;
-      var opts = _opts(Leaf.defaults, attributes);
-      var leaf = paper.set().data('id', this.id),
+      var opts = _opts(Leaf.defaults, attributes),
           x    = opts.x, y = opts.y,
           xb   = x + opts.template.bladeOffsetX,
           yb   = y + opts.template.bladeOffsetY;
-      leaf.hide().push(
-         paper.path(opts.template.blade.replace('{x}', xb).replace('{y}', yb))
-            .attr(opts.blade).data('id', 'blade'+idNumber),
-         paper.path(opts.template.stem.replace('{x}', x).replace('{y}', y))
-            .attr(opts.stem)
-            .data('id', 'stem'+idNumber)
-      );
 
-      this.leafGraphic = leaf;
-      this.attached = false;
+      // we need to declare the leafGraphic object here so we can use it in Transformation constructor, but
+      // we will complete the building of the graphic below, since we need the transformation for that part
+      this.leafGraphic = paper.set();
 
       // apply the options for scale, angle, etc
       // the Transformation helps us keep track of where we are and make sure than any modifications we
       // make from this point forward are cumulative (as Raphael tends to go back to square one with each
       // call to transform)
-      this.transformation = new Transformation({
+      this.transformation = new Transformation(this.leafGraphic, {
          x: x,
          y: y,
          scaleX: opts.scaleX,
@@ -205,15 +188,45 @@ jQuery(function($) {
          angle: opts.angle
       });
 
-      // the Color instance is inside during paper.customAttributes.hue; this is a bit circuitous but
-      // necessary to make Rapahel's animations work with customAttributes; otherwise, we have to manually
-      // run all the animations ourselves, which is a mess, so this small coupling mess prevents a bigger
-      // coding mess
-      this.color = leaf[0].data('Color');
+      // The Color set here is used internally by Paper.customAttributes.season (necessary for Raphael animations
+      // to work intelligently). It is applied below by the .attr() method (which includes an attribute `season`
+      // that triggers the customAttribute).
+      //
+      // A bit more confusing is that the color values set here (inside Color constructor) are never used.
+      // They will immediately changed out when `season` is invoked. It's low cost since we don't actually
+      // apply the color until that event runs, but convoluted to trace where/when it's getting applied and
+      // what values are used.
+      this.color = new Color();
+
+      // creates a Raphael SVG vector graphic for the blade and stem with paper.path, stores them in a set created
+      // by paper.set, then applies the season--a color gradient--using paper.attr({season: ...}), and stores all
+      // that in the local this.leafGraphic for reference
+      this.leafGraphic
+         .data('id', this.id)
+         .hide()
+         .push(
+            paper.path(opts.template.blade.replace('{x}', xb).replace('{y}', yb))
+               .data('Color', this.color)
+               .data('LeafTransform', this.transformation)
+               .attr(opts.blade) // Color applied here
+               .data('id', 'blade'+idNumber),
+            paper.path(opts.template.stem.replace('{x}', x).replace('{y}', y))
+               .data('LeafTransform', this.transformation)
+               .attr(opts.stem)
+               .data('id', 'stem'+idNumber)
+         )
+         .attr({wind: [0, 0]}); // initialize the wind effect
+
+      this.attached = false;
    }
    Leaf.counter = 1;
 
    /**
+    * Get direct access to the Raphael graphic components.
+    *
+    * Really this should only be used by Leaf and maybe by Transformation. Externals should just call methods
+    * on Leaf and Tree to invoke animations and changes.
+    *
     * @param {string} [part]
     * @return {object} raphael path object or set of paths (if no part provided)
     */
@@ -232,7 +245,7 @@ jQuery(function($) {
       this.attached = true;
       this.transformation.vertex(x, y);
       if( angle ) { this.transformation.rotate(angle); }
-      this.transformation.checkpoint().apply(this.graphic());
+      this.transformation.checkpoint().apply();
       this.graphic().show();
       return this;
    };
@@ -247,57 +260,10 @@ jQuery(function($) {
    };
 
    Leaf.prototype.applyWind = function(wind) {
-      if( true ) { //todo
-         var self = this;
-         return $.Deferred(function(def) {
-            // leaf is attached, so it shudders
-            //todo
-            var count = 20;//rand(Math.floor(wind.strength*30), Math.floor(wind.strength*60));
-            console.log('count', count);
-            var i = count, min = -20, max = 20; //todo
-            var tr = self.transformation, graphic = self.graphic();
-            var pipe = $.Deferred().resolve();
-            var duration = 500; //Math.floor(wind.duration/count/2);
-            //todo
-            //todo
-            //todo this is what we want
-//            console.log('shaking'+count+'times');
-//            while(i--) {
-//               pipe = pipe.pipe(function() {
-//                  console.log('up');
-//                  return tr.rotate('+='+rand(min,max)).animate(graphic, duration, 'elastic');
-//               })
-//               .pipe(function() {
-//                     console.log('down');
-//                  return tr.rotate('-='+rand(min,max)).animate(graphic, duration, 'elastic');
-//               })
-//            }
-//            pipe.done(function() {
-//               console.log('reset');
-//               tr.reset().animate(graphic, duration, 'elastic');
-//            });
-            //todo
-            //todo
-            //todo
-            //todo this works though : (
-            var props = self.transformation.orig;
-            (function recurseAnimate() {
-               if( i-- ) {
-                  self.graphic().animate({transform: 'S'+props.scaleX+','+props.scaleY+','+','+props.x+','+props.y+' R'+(props.angle-rand(min, max))+','+props.x+','+props.y}, wind.duration, 'elastic', recurseAnimate);
-               }
-               else {
-                  self.graphic().animate({transform: 'S'+props.scaleX+','+props.scaleY+','+','+props.x+','+props.y+' R'+props.angle+','+props.x+','+props.y}, wind.duration, 'elastic');
-               }
-            })();
-         });
-      }
-      else {
-         // leaf is not attached so it blows somewhere
-         //todo
-         //todo
-         //todo
-         throw new Error('I haven\'t been implemented for unattached leaves yet');
-      }
+      this.leafGraphic.animate({wind: [1, 1]}, 500, 'bounce');
+      //todo
+      //todo
+      //todo transformation.applyWind?
    };
 
 
@@ -393,7 +359,7 @@ jQuery(function($) {
     *  most recent settings.
     ******************************************************************/
 
-   function Transformation(props) {
+   function Transformation(graphic, props) {
       this.orig = $.extend({
          x: 0,
          y: 0,
@@ -401,6 +367,7 @@ jQuery(function($) {
          scaleY: 1,
          scaleX: 1
       }, props);
+      this.graphic = graphic;
       this.current = $.extend({}, this.orig);
    }
 
@@ -454,8 +421,8 @@ jQuery(function($) {
       return 'S'+c.scaleX+','+c.scaleY+xyString+' R'+c.angle+xyString;
    };
 
-   Transformation.prototype.apply = function(graphic) {
-      graphic.transform(this.toString());
+   Transformation.prototype.apply = function() {
+      this.graphic.transform(this.toString());
       return this;
    };
 
@@ -466,45 +433,16 @@ jQuery(function($) {
     * @param {string}   [easing]
     * @return {jQuery.Deferred} promise
     */
-   Transformation.prototype.animate = function(graphic, moreAnimProps, duration, easing) {
+   Transformation.prototype.animate = function(moreAnimProps, duration, easing) {
       var args = _transformAnimateArgs($.makeArray(arguments));
       return $.Deferred(function(def) {
          console.log('animation started', args);
-         args.graphic.animate($.extend({transform: this.toString()}, args.more), args.duration, args.easing, function() {
+         this.graphic.animate($.extend({transform: this.toString()}, args.more), args.duration, args.easing, function() {
             console.log('animate done');
             def.resolve();
          });
       }).promise();
    };
-
-
-   /**
-    * MAKE IT DO
-    **********************************************************************/
-
-   // generate the leaves
-   var TREE = new Tree(PAPER);
-   for(var i=0; i < 10; i++) {
-      TREE.addLeaf();
-   }
-
-   //animate the leaves
-      TREE.changeSeason(['-='+Color.defaults.run, 1], 8000, function() {
-         //TREE.applyWind(new Wind(.5, 1000));
-      });
-
-   setTimeout(function() {
-      TREE.applyWind(new Wind(1, 50));
-   }, 1500);
-
-//   var shiftInterval = setInterval(shiftHue, 10);
-
-   //debug track mouse movement
-   $PAPER.on('mousemove', function(e) {
-      var off = $PAPER.offset();
-      $('#log').text('x: '+ (e.pageX-off.left) +', y: '+ (e.pageY - off.top));
-   });
-
 
    /**
     * UTILITIES
@@ -651,8 +589,8 @@ jQuery(function($) {
     * @private intended for Transformation.prototype.animate only
     */
    function _transformAnimateArgs(argList) {
-      var out = {graphic: argList[0]}, i = argList.length;
-      while(i-- > 1) {
+      var out = {}, i = argList.length;
+      while(i--) {
          switch(typeof(i)) {
             case 'object':
                out.more = argList[i];
@@ -667,5 +605,39 @@ jQuery(function($) {
       }
       return out;
    }
+
+   /**
+    * MAKE IT DO
+    **********************************************************************/
+
+   // generate the leaves
+   var TREE = new Tree(PAPER);
+   for(var i=0; i < 1; i++) {
+      TREE.addLeaf();
+   }
+
+   //animate the leaves
+   TREE.changeSeason(['-='+Color.defaults.run, 1], 8000, function() {
+      //TREE.applyWind(new Wind(.5, 1000));
+      console.log('season change completed');
+   });
+
+   setTimeout(function() {
+      TREE.applyWind(new Wind(1, 50));
+   }, 1000);
+
+//   setInterval(function() {
+//      if( rand(1,100) < 25 ) {
+//         TREE.applyWind(new Wind(rand(.1, 1, 2), rand(10, 50)));
+//      }
+//   }, 50);
+
+//   var shiftInterval = setInterval(shiftHue, 10);
+
+   //debug track mouse movement
+   $PAPER.on('mousemove', function(e) {
+      var off = $PAPER.offset();
+      $('#log').text('x: '+ (e.pageX-off.left) +', y: '+ (e.pageY - off.top));
+   });
 
 });
