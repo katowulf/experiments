@@ -260,8 +260,8 @@ jQuery(function($) {
    };
 
    Leaf.prototype.applyWind = function(wind) {
-      this.leafGraphic[0].attr({magnitude: wind.strength*20}).attr({wind: 0});
-      this.leafGraphic[1].attr({magnitude: wind.strength*20}).attr({wind: 0});
+      this.leafGraphic[0].attr({magnitude: wind.strength*10}).attr({wind: 0});
+      this.leafGraphic[1].attr({magnitude: wind.strength*10}).attr({wind: 0});
       this.leafGraphic.animate({wind: 25}, 750, 'bounce');
    };
 
