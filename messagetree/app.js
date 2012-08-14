@@ -63,11 +63,12 @@ jQuery(function($) {
       return {fill: color.toGrad()};
    };
 
-   PAPER.customAttributes.wind = function(step, magnitude) {
-//      var tr = this.data('Transformation');
-//      tr.rotate( Math.sin( step ) / 2 );
-      console.log('wind', step, magnitude);
+   PAPER.customAttributes.wind = function(step) {
+      var magnitude = this.attr('magnitude');
+      return {transform: this.data('Transformation').rotate( _makeAdjustable(magnitude * Math.sin(step) / 2) ).toString()};
    };
+
+   PAPER.customAttributes.magnitude = function() {};
 
    /** TREE: a tree graphic and canvas element
     ******************************************************************/
@@ -207,15 +208,14 @@ jQuery(function($) {
          .push(
             paper.path(opts.template.blade.replace('{x}', xb).replace('{y}', yb))
                .data('Color', this.color)
-               .data('LeafTransform', this.transformation)
+               .data('Transformation', this.transformation)
                .attr(opts.blade) // Color applied here
                .data('id', 'blade'+idNumber),
             paper.path(opts.template.stem.replace('{x}', x).replace('{y}', y))
-               .data('LeafTransform', this.transformation)
+               .data('Transformation', this.transformation)
                .attr(opts.stem)
                .data('id', 'stem'+idNumber)
-         )
-         .attr({wind: [0, 0]}); // initialize the wind effect
+         );
 
       this.attached = false;
    }
@@ -260,10 +260,9 @@ jQuery(function($) {
    };
 
    Leaf.prototype.applyWind = function(wind) {
-      this.leafGraphic.animate({wind: [1, 1]}, 500, 'bounce');
-      //todo
-      //todo
-      //todo transformation.applyWind?
+      this.leafGraphic[0].attr({magnitude: wind.strength*20}).attr({wind: 0});
+      this.leafGraphic[1].attr({magnitude: wind.strength*20}).attr({wind: 0});
+      this.leafGraphic.animate({wind: 25}, 750, 'bounce');
    };
 
 
@@ -581,6 +580,18 @@ jQuery(function($) {
       if( min !== undef ) { v = Math.max(v, min); }
       if( max !== undef ) { v = Math.min(v, max); }
       return v;
+   }
+
+   /**
+    * Given a relative number, return a string suitable to be used with _adjustableNumber
+    *
+    * @param {number} n
+    * @return {string}
+    * @private
+    */
+   function _makeAdjustable(n) {
+      var pref = n < 0? '-=' : '+=';
+      return pref + '' + Math.abs(n);
    }
 
    /**
