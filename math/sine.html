@@ -53,7 +53,34 @@
 
         jQuery(function($) {
 
-            var PAPER = new Raphael('paper', 500, 300);
+            // this method is from http://www.treeblurb.com/dev_math/test05.html
+            function sinePath(sx, sy, distance) {
+                // sine path from 0 to rads radians scales by sx
+
+                var i,y;
+                var count = 20*distance;
+                var dx = 2 * Math.PI / count;
+                var x  = 0;
+                var px = sx;
+                var py = sy;
+
+                var p = "M"+ px +","+ py;
+
+                for(i = 0; i < count; i++) {
+                    x += dx;
+                    y = Math.sin(x);
+
+                    px += (180.0 / Math.PI) * dx;
+                    py = sy - Math.floor(sy/2) * y;
+
+                    p += "L" + px + "," + py;
+                }
+                //p += " " + p0;
+
+                return p;
+            }
+
+            var PAPER = new Raphael('paper', 440, 300);
 
             function round(num, digits) {
                 var p = Math.pow(10, digits);
@@ -61,52 +88,24 @@
             }
 
             var magnitude = 10;
-            var distance  = 25;
-
-            function sinePath() {
-                // sine path from 0 to rads radians scales by sx
-
-                var y;
-                var N  = 29;
-                var pi = 3.141592653579;
-                var dx = 2*pi/N;
-                var x  = 0;
-                var px = 150;
-                var py = 50;
-
-                var p0 = "M"+ px +","+ py;
-                var p  = p0;
-
-                for (var i=0; i < N; i++)
-                {
-                    x += dx;
-                    y = Math.cos(x);
-
-                    px += (180.0/pi)*dx;
-                    py = 100 - 50*y;
-
-                    p += "L"+ px +","+ py;
-                }
-                p += " " + p0;
-
-                //console.log("circ path : "+p);
-                return p;
-            }
+            var distance  = 400;
 
             function redraw() {
                 PAPER.clear();
-                PAPER.path('M250,20 250,480').attr({"stroke": "#eee", "stroke-width":1});
 
-                var path = PAPER.path("m250,20").attr({"stroke": "#009", "stroke-width": 2});
+                PAPER.path('M20,150 420,150').attr({"stroke": "#999", "stroke-width":1});
+
+                var path = PAPER.path(sinePath(20, 150, distance)).attr({"stroke": "#009", "stroke-width": 2});
+//                var path = PAPER.path("m250,20").attr({"stroke": "#009", "stroke-width": 2});
 
                 //path1.animate({path: "M114,100c0,50 100-50 100,0c0,50 -100-50 -100"},5000).attr({"stroke": "#999", "stroke-width":1});
-                var inc = Math.PI * 2 / 100;
-                var v, counter = 0;
-                for(var i=0; i <= distance; i += .01) {
-                    i = round(i, 2);
-                    v = magnitude * round(Math.sin(counter)/2, 3);
-                    counter += inc;
-                }
+//                var inc = Math.PI * 2 / 100;
+//                var v, counter = 0;
+//                for(var i=0; i <= distance; i += .01) {
+//                    i = round(i, 2);
+//                    v = magnitude * round(Math.sin(counter)/2, 3);
+//                    counter += inc;
+//                }
             }
 
             $('#magnitude').noUiSlider('init', {
@@ -124,7 +123,7 @@
             $('#distance').noUiSlider('init', {
                 knobs: 1,
                 connect: "lower",
-                scale: [1, 25],
+                scale: [50, 400],
                 start: [distance],
                 change: function() {
                     distance = this.noUiSlider('value')[1];
