@@ -1,0 +1,151 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+        "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <title>Test Sin Function</title>
+
+    <link rel="stylesheet" href="../lib/nouislider/nouislider.css" />
+
+    <style type="text/css">
+        #paper {
+            margin-top: 25px;
+            width: 500px;
+            height: 300px;
+            border: 1px solid gray;
+        }
+
+        .outer span {
+            display: inline-block;
+            width: 150px;
+            text-align: right;
+            margin-right: 20px;
+        }
+
+        .outer h3 {
+            display: inline-block;
+        }
+
+        #magnitude, #distance {
+            display: inline-block;
+            width: 100px;
+            margin-right: 20px;
+        }
+
+        .cf:before,
+        .cf:after {
+            content: " "; /* 1 */
+            display: table; /* 2 */
+        }
+        .cf:after { clear: both; }
+        .cf { *zoom: 1; }
+
+        #magnitude:after, #distance:after {
+
+        }
+    </style>
+
+    <script type="text/javascript" src="http://code.jquery.com/jquery-1.7.2.js"></script>
+    <!--<script type="text/javascript" src="../lib/js/sprintf.js"></script>-->
+    <script type="text/javascript" src="../lib/js/raphael.2.1.js"></script>
+    <script type="text/javascript" src="../lib/nouislider/jquery.nouislider.js"></script>
+    <script type="text/javascript">
+
+        jQuery(function($) {
+
+            var PAPER = new Raphael('paper', 500, 300);
+
+            function round(num, digits) {
+                var p = Math.pow(10, digits);
+                return digits? Math.round(num * p) / p : Math.round(num);
+            }
+
+            var magnitude = 10;
+            var distance  = 25;
+
+            function sinePath() {
+                // sine path from 0 to rads radians scales by sx
+
+                var y;
+                var N  = 29;
+                var pi = 3.141592653579;
+                var dx = 2*pi/N;
+                var x  = 0;
+                var px = 150;
+                var py = 50;
+
+                var p0 = "M"+ px +","+ py;
+                var p  = p0;
+
+                for (var i=0; i < N; i++)
+                {
+                    x += dx;
+                    y = Math.cos(x);
+
+                    px += (180.0/pi)*dx;
+                    py = 100 - 50*y;
+
+                    p += "L"+ px +","+ py;
+                }
+                p += " " + p0;
+
+                //console.log("circ path : "+p);
+                return p;
+            }
+
+            function redraw() {
+                PAPER.clear();
+                PAPER.path('M250,20 250,480').attr({"stroke": "#eee", "stroke-width":1});
+
+                var path = PAPER.path("m250,20").attr({"stroke": "#009", "stroke-width": 2});
+
+                //path1.animate({path: "M114,100c0,50 100-50 100,0c0,50 -100-50 -100"},5000).attr({"stroke": "#999", "stroke-width":1});
+                var inc = Math.PI * 2 / 100;
+                var v, counter = 0;
+                for(var i=0; i <= distance; i += .01) {
+                    i = round(i, 2);
+                    v = magnitude * round(Math.sin(counter)/2, 3);
+                    counter += inc;
+                }
+            }
+
+            $('#magnitude').noUiSlider('init', {
+                knobs: 1,
+                connect: "lower",
+                scale: [1, 100],
+                start: [magnitude],
+                change: function() {
+                    magnitude = this.noUiSlider('value')[1];
+                    this.next('h3').text(magnitude);
+                },
+                end: redraw
+            });
+
+            $('#distance').noUiSlider('init', {
+                knobs: 1,
+                connect: "lower",
+                scale: [1, 25],
+                start: [distance],
+                change: function() {
+                    distance = this.noUiSlider('value')[1];
+                    this.next('h3').text(distance);
+                },
+                end: redraw
+            });
+
+            $('#magnitude').next('h3').text(magnitude);
+            $('#distance').next('h3').text(distance);
+            redraw();
+        });
+
+    </script>
+</head>
+<body>
+
+<div class="outer"><span>Magnitude</span><div id="magnitude" class="noUiSlider"></div><h3>10</h3></div>
+<div class="outer"><span>Distance</span><div id="distance" class="noUiSlider"></div><h3>1</h3></div>
+
+<div id="paper"></div>
+
+</body>
+</html>

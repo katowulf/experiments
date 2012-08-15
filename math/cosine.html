@@ -1,0 +1,156 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+        "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <title></title>
+
+    <link rel="stylesheet" href="../lib/nouislider/nouislider.css" />
+
+    <style type="text/css">
+        #paper {
+            margin-top: 25px;
+            width: 550px;
+            height: 180px;
+            border: 1px solid gray;
+        }
+
+        .outer span {
+            display: inline-block;
+            width: 150px;
+            text-align: right;
+            margin-right: 20px;
+        }
+
+        .outer h3 {
+            display: inline-block;
+        }
+
+        #magnitude, #distance {
+            display: inline-block;
+            width: 100px;
+            margin-right: 20px;
+        }
+
+        .cf:before,
+        .cf:after {
+            content: " "; /* 1 */
+            display: table; /* 2 */
+        }
+        .cf:after { clear: both; }
+        .cf { *zoom: 1; }
+
+        #magnitude:after, #distance:after {
+
+        }
+    </style>
+
+    <script type="text/javascript" src="http://code.jquery.com/jquery-1.7.2.js"></script>
+    <!--<script type="text/javascript" src="../lib/js/sprintf.js"></script>-->
+    <script type="text/javascript" src="../lib/js/raphael.2.1.js"></script>
+    <script type="text/javascript" src="../lib/nouislider/jquery.nouislider.js"></script>
+    <script type="text/javascript">
+
+        /**
+         * Most of this code is from http://www.treeblurb.com/dev_math/test05.html
+         * With some adaptations taken from http://raphaeljs.com/gear.html
+         */
+
+        Raphael.fn.circlePath = function(x, y, r)
+        {
+            return "M" + x + "," + (y-r) + "A"+r+","+r+",-90,1,1,"+(x-0.1)+","+(y-r)+" z";
+        };
+
+        function svg_path_cos(sy, sx)
+        {
+            // sine path from 0 to rads radians scales by sx
+
+            var y;
+            var N = 29;
+            var pi = 3.141592653579;
+            var dx=2*pi/N;
+            var x=0;
+            var px = 150;
+            var py =  50;
+
+            var p0 = "M"+ px +","+ py;
+            var p = p0;
+
+            for (var i=0;i<N;i++)
+            {
+                x += dx;
+                y = Math.cos(x);
+
+                px += (180.0/pi)*dx;
+                py = 100 - 50*y;
+
+                p += "L"+ px +","+ py;
+            }
+            p += " " + p0;
+
+            //console.log("circ path : "+p);
+            return p;
+        }
+
+
+        jQuery(function($) {
+
+            var r = new Raphael("paper", 550, 180),
+                    circpath = r.circlePath(100,100, 50);
+
+            r.customAttributes.along = function (v) {
+                var path = this.data('alongWhat'), start = path.getPointAtLength(0), len = path.getTotalLength();
+                var point = path.getPointAtLength(v * len);
+                return {
+                    transform: "T" + [point.x - start.x, point.y - start.y] //+ "R" + point.alpha
+                };
+            };
+
+            var p = r.path(circpath).attr({stroke: "LightBlue", opacity: .8, "stroke-width": 3}),
+                    over = r.path().attr({stroke: "LightGreen" }),
+                    e = r.ellipse(100,100, 5, 5).attr({stroke: "none", fill: "Orange"}).onAnimation(function () {
+                        over.attr({path: "M100,100L" + this.attr("cx") + "," + this.attr("cy") + "z"});
+                    });
+            e.clone();
+            e.attr({cx:100, cy: 50, rx:5, ry:5, fill:"Red"});            // outer point
+            //e.attr({cx:150,cy:100,  rx:5, ry:5, fill:"Red"});            // outer point
+
+            //r.rotate(90);  //no path.rotate()
+
+            var pcos = r.path(svg_path_cos(100)).attr({stroke: "LightBlue", opacity:0.8, "stroke-width": 3});
+            var ecos = r.ellipse(150,50,5,5).attr({stroke: "none", fill: "Red"});
+
+            //grid lines
+
+            var xaxis = r.path("M25 100 L513 100").attr({stroke: "LightGreen", opacity:0.6, "stroke-width": 1});
+            var yaxisc = r.path("M100 25 L100 175").attr({stroke: "LightGreen", opacity:0.6, "stroke-width": 1});
+            var yaxiss = r.path("M150 25 L150 175").attr({stroke: "LightGreen", opacity:0.6, "stroke-width": 1});
+
+
+            function run() {
+                ecos.attr({cx: 150, cy: 50});
+                ecos.data('alongWhat', pcos).attr({along: 0}).animate({along: 1}, 3000);
+
+                e.data('alongWhat', p).attr({along: 0}).animate({along: 1}, 3000, function() {
+                    setTimeout(run);
+                });
+            }
+
+            run();
+
+            $('#paper').on('mousemove', function(e) {
+               var off = $(this).offset();
+               $('#log').text('x: '+(e.pageX - off.left)+', y: '+ (e.pageY - off.top));
+            });
+
+        });
+
+    </script>
+</head>
+<body>
+
+<div id="paper"></div>
+<div id="log"></div>
+
+</body>
+</html>

@@ -131,7 +131,6 @@ jQuery(function($) {
     *
     * @param {Array|number|string} props  see above
     * @param {int}         [duration]  in milliseconds (defaults to 8000)
-    * @param {boolean}     [relative]  adjust relative to current, instead of setting to the values provided
     * @param {function}    [callback]
     * @return {Tree}
     */
@@ -139,7 +138,7 @@ jQuery(function($) {
       //todo instead of passing animation methods here, let's define "seasons" and config variables
       //todo or as a new Class and let them do the animate, then pass a Season instance here?
       //todo then the Season instance can decide how firmly leaves are attached
-      var opts, attr, leaf, args = _makeArgsChangeSeason($.makeArray(arguments));
+      var attr, leaf, args = _makeArgsChangeSeason($.makeArray(arguments));
       console.time('changeSeason'); //debug
       var leaves = this.leaves, len = leaves.length, i = len, complete = 0;
 
@@ -154,7 +153,6 @@ jQuery(function($) {
       while(i--) {
          leaf = leaves[i];
          attr = _adjustHueArray(args.attr, leaf.color.base);
-         console.log('animating', leaf.id, attr);
          //todo should Tree be modifying Leaf's graphic directly? Coupled, but what alternatives aren't silly?
          leaf.graphic('blade').animate({season: attr}, args.duration, checkComplete);
       }
@@ -416,7 +414,6 @@ jQuery(function($) {
    Transformation.prototype.toString = function() {
       var c = this.current,
           xyString = ',' + c.x + ',' + c.y;
-      console.log('transform string', 'S'+c.scaleX+','+c.scaleY+xyString+' R'+c.angle+xyString);//debug
       return 'S'+c.scaleX+','+c.scaleY+xyString+' R'+c.angle+xyString;
    };
 
@@ -435,9 +432,7 @@ jQuery(function($) {
    Transformation.prototype.animate = function(moreAnimProps, duration, easing) {
       var args = _transformAnimateArgs($.makeArray(arguments));
       return $.Deferred(function(def) {
-         console.log('animation started', args);
          this.graphic.animate($.extend({transform: this.toString()}, args.more), args.duration, args.easing, function() {
-            console.log('animate done');
             def.resolve();
          });
       }).promise();
@@ -630,11 +625,13 @@ jQuery(function($) {
    //animate the leaves
    TREE.changeSeason(['-='+Color.defaults.run, 1], 8000, function() {
       //TREE.applyWind(new Wind(.5, 1000));
-      console.log('season change completed');
+      console.log('TREE.changeSeason callback invoked');
    });
 
    setTimeout(function() {
-      TREE.applyWind(new Wind(1, 50));
+      TREE.applyWind(new Wind(1, 50), function() {
+         console.log('TREE.applyWind callback invoked');
+      });
    }, 1000);
 
 //   setInterval(function() {
