@@ -1,0 +1,50 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+        "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <title>Spritemation test</title>
+
+    <link rel="stylesheet" href="../lib/nouislider/nouislider.css" />
+    <style type="text/css">
+        #sprite {
+            width: 32px;
+            height: 32px;
+            background: transparent url(sprite.png) no-repeat 0 0;
+        }
+    </style>
+
+    <script type="text/javascript" src="http://code.jquery.com/jquery-1.8.0.js"></script>
+    <script type="text/javascript" src="../lib/js/jquery.unitconverter.js"></script>
+    <script type="text/javascript" src="../lib/nouislider/jquery.nouislider.js"></script>
+    <script type="text/javascript" src="jquery.spritemation.js"></script>
+    <script type="text/javascript">
+        jQuery(function($) {
+            var value = 0;
+
+            function moveSprite() {
+                $('#sprite').spritemation(value, 1000);
+            }
+
+            $('#amplitude').noUiSlider('init', {
+                knobs: 1,
+                connect: "lower",
+                scale: [0, 10],
+                start: [amplitude],
+                change: function() {
+                    value = this.noUiSlider('value')[1];
+                    this.next('h3').text(value);
+                },
+                end: moveSprite
+            });
+        });
+    </script>
+</head>
+<body>
+
+   <div class="outer"><span>Amplitude</span><div id="amplitude" class="noUiSlider"></div><h3>10</h3></div>
+
+    <div id="sprite"></div>
+
+</body>
+</html>

@@ -10,7 +10,7 @@
     <style type="text/css">
         #paper {
             margin-top: 25px;
-            width: 500px;
+            width: 440px;
             height: 300px;
             border: 1px solid gray;
         }
@@ -26,7 +26,7 @@
             display: inline-block;
         }
 
-        #magnitude, #frequency {
+        #amplitude, #frequency {
             display: inline-block;
             width: 100px;
             margin-right: 20px;
@@ -40,7 +40,7 @@
         .cf:after { clear: both; }
         .cf { *zoom: 1; }
 
-        #magnitude:after, #frequency:after {
+        #amplitude:after, #frequency:after {
 
         }
     </style>
@@ -53,49 +53,47 @@
 
         jQuery(function($) {
 
-            // this method is from http://www.treeblurb.com/dev_math/test05.html
-            function sinePath(sx, sy, frequency, magnitude) {
-                // sine path from 0 to rads radians scales by sx
+            var MAX_AMPLITUDE = 20;
+            var MAX_FREQUENCY = 20;
+            var W = 440, H = 300, MARGIN = 20, MW = W-MARGIN* 2, MH = H-MARGIN*2;
+            var PAPER = new Raphael('paper', W, H);
 
-                var i,y;
-                var count = 30*frequency;
-                var dx = 2 * Math.PI / count;
-                var x  = 0;
-                var px = sx;
-                var py = sy;
+            // with inspiration from http://www.treeblurb.com/dev_math/test05.html
+            // and teh maths from http://processing.org/learning/basics/sinewave.html
+            function sinePath(sx, sy, period, amplitude) {
+                // how far apart should each point in our path be?
+                var xspacing = 5/frequency;
+                var dx = ((2 * Math.PI) / period) * xspacing;
+                var y, x = 0, px, py;
 
-                var p = "M"+ px +","+ py;
+                var path = "M"+ sx +","+ sy;
 
-                for(i = 0; i < count; i++) {
-                    x += dx*frequency;
-                    y = Math.sin(x) * magnitude;
-
-                    px += (180 / Math.PI) * dx;
-                    py = sy - Math.floor(sy/2) * y;
-
-                    p += "L" + px + "," + py;
+                for(var i = 0; i <= Math.floor(MW/xspacing); i++) {
+                   y = Math.sin(x) * amplitude;
+//                   px += (180/Math.PI) * dx;
+                   px = sx + i * xspacing;
+                   py = sy + y;
+                   path += " L" + px + ',' + py;
+                   x += dx;
                 }
-                //p += " " + p0;
 
-                return p;
+                return path;
             }
-
-            var PAPER = new Raphael('paper', 440, 300);
 
             function round(num, digits) {
                 var p = Math.pow(10, digits);
                 return digits? Math.round(num * p) / p : Math.round(num);
             }
 
-            var magnitude = 10;
-            var frequency = 1;
+            var amplitude = 10;
+            var frequency = 5;
 
             function redraw() {
                 PAPER.clear();
 
-                PAPER.path('M20,150 480,150').attr({"stroke": "#999", "stroke-width":1});
+                PAPER.path('M'+MARGIN+',150 '+(W-MARGIN)+',150').attr({"stroke": "#999", "stroke-width":1});
 
-                var path = PAPER.path(sinePath(20, 150, frequency, magnitude / 10)).attr({"stroke": "#009", "stroke-width": 2});
+                var path = PAPER.path(sinePath(MARGIN, Math.floor(H/2), MW/frequency, Math.floor(MH/MAX_AMPLITUDE/2*amplitude))).attr({"stroke": "#009", "stroke-width": 2});
 //                var path = PAPER.path("m250,20").attr({"stroke": "#009", "stroke-width": 2});
 
                 //path1.animate({path: "M114,100c0,50 100-50 100,0c0,50 -100-50 -100"},5000).attr({"stroke": "#999", "stroke-width":1});
@@ -103,19 +101,19 @@
 //                var v, counter = 0;
 //                for(var i=0; i <= frequency; i += .01) {
 //                    i = round(i, 2);
-//                    v = magnitude * round(Math.sin(counter)/2, 3);
+//                    v = amplitude * round(Math.sin(counter)/2, 3);
 //                    counter += inc;
 //                }
             }
 
-            $('#magnitude').noUiSlider('init', {
+            $('#amplitude').noUiSlider('init', {
                 knobs: 1,
                 connect: "lower",
-                scale: [1, 20],
-                start: [magnitude],
+                scale: [1, MAX_AMPLITUDE],
+                start: [amplitude],
                 change: function() {
-                    magnitude = this.noUiSlider('value')[1];
-                    this.next('h3').text(magnitude);
+                    amplitude = this.noUiSlider('value')[1];
+                    this.next('h3').text(amplitude);
                 },
                 end: redraw
             });
@@ -123,7 +121,7 @@
             $('#frequency').noUiSlider('init', {
                 knobs: 1,
                 connect: "lower",
-                scale: [1, 20],
+                scale: [1, MAX_FREQUENCY],
                 start: [frequency],
                 change: function() {
                     frequency = this.noUiSlider('value')[1];
@@ -132,19 +130,25 @@
                 end: redraw
             });
 
-            $('#magnitude').next('h3').text(magnitude);
+            $('#amplitude').next('h3').text(amplitude);
             $('#frequency').next('h3').text(frequency);
             redraw();
+
+            var paperOffset = $('#paper').offset();
+            $('#paper').on('mousemove', function(e) {
+               $('#log').text('x: '+(e.pageX-paperOffset.left)+', y: '+(e.pageY-paperOffset.top));
+            });
         });
 
     </script>
 </head>
 <body>
 
-<div class="outer"><span>Magnitude</span><div id="magnitude" class="noUiSlider"></div><h3>10</h3></div>
+<div class="outer"><span>Amplitude</span><div id="amplitude" class="noUiSlider"></div><h3>10</h3></div>
 <div class="outer"><span>Frequency</span><div id="frequency" class="noUiSlider"></div><h3>1</h3></div>
 
 <div id="paper"></div>
+<div id="log"></div>
 
 </body>
 </html>

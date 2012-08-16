@@ -42,9 +42,12 @@ jQuery(function($) {
          "fill-opacity": 1,
          stroke: 'none'
       },
-      scaleX: function() { return rand(.9, 1.25, 2) }, // if this doesn't match scaleY, the leaf will appear skewed
-      scaleY: function() { return rand(1, 1.5, 2)   },
-      angle:  function() { return rand(35, 95)      }  // turn the leaf (around the stem's connection point)
+//      scaleX: function() { return rand(.9, 1.25, 2) }, // if this doesn't match scaleY, the leaf will appear skewed
+//      scaleY: function() { return rand(1, 1.5, 2)   },
+      scaleX: function() { return rand(.35, .7, 2) }, // if this doesn't match scaleY, the leaf will appear skewed
+      scaleY: function() { return rand(.35, .8, 2)   },
+
+      angle:  function() { return rand(25, 75)      }  // turn the leaf (around the stem's connection point)
    };
 
    /** CUSTOM ATTRIBUTES: special animation/attr() behaviors for Raphael
@@ -64,8 +67,24 @@ jQuery(function($) {
    };
 
    PAPER.customAttributes.wind = function(step) {
-      var magnitude = this.attr('magnitude');
-      return {transform: this.data('Transformation').rotate( _makeAdjustable(magnitude * Math.sin(step) / 2) ).toString()};
+      //todo make these skew and scale slightly so they look three dimensional!
+
+      // two times the radius of a circle is one sine wave in length, multiply that
+      // between the scale (0-1) to determine where in the sine wave we are
+      var inc       = 2 * Math.PI * (step%1);
+
+      // the magnitude is used to determine how big of a rotation occurs
+      // the rotation is the current point in the sine wave times the magnitude
+      // rounding seems to keep those funky JavaScript rounding errors from creeping in
+      // which make our leaf not return to origin by the end of the sine wave
+      var magnitude = round(this.attr('magnitude') * Math.sin(inc), 2);
+
+      // convert that rotation to an adjustable value (+= or -=)
+      var adj       =  _makeAdjustable(magnitude);
+//      console.log('wind adjustment', adj, round(Math.sin(inc), 2), step);
+
+      // invoke the transform event by clearing any currently applied rotation and adding ours
+      return {transform: this.data('Transformation').reset().rotate(adj).toString()};
    };
 
    PAPER.customAttributes.magnitude = function() {};
@@ -80,7 +99,7 @@ jQuery(function($) {
    }
 
    Tree.prototype.addLeaf = function(attributes) {
-      var i = this.leaves.length, x = 75 + i * rand(1,20), y = 150 + i * rand(20,50); //todo
+      var i = this.leaves.length, x = 50 + i*10 + rand(-10,10), y = 50 + i*10 + rand(-5,25); //todo
       this.attachPoints.push([x,y]);//todo
       var po = $PAPER.offset(); //debug
       $('<div class="marker" />').appendTo('body').offset({left: x+po.left, top: y+po.top}); //debug
@@ -101,13 +120,14 @@ jQuery(function($) {
       //todo
       //todo
       //todo
-      console.time('applyWind'); //debug
+//      console.time('applyWind'); //debug
       var leaves = this.leaves, len = leaves.length, i = len, complete = 0;
 
       function checkComplete() {
          complete++;
          if( complete == len ) {
-            console.timeEnd('applyWind'); //debug
+            callback && callback();
+//            console.timeEnd('applyWind'); //debug
          }
       }
 
@@ -257,15 +277,31 @@ jQuery(function($) {
       return this;
    };
 
-   Leaf.prototype.applyWind = function(wind) {
-      this.leafGraphic[0].attr({magnitude: wind.strength*10}).attr({wind: 0});
-      this.leafGraphic[1].attr({magnitude: wind.strength*10}).attr({wind: 0});
-      this.leafGraphic.animate({wind: 25}, 750, 'bounce');
+   Leaf.prototype.applyWind = function(wind, callback) {
+      var self = this;
+//      this.transformation.checkpoint();
+      var magnitude = wind.strength*rand(2,3);
+      var shakes = Math.floor(wind.strength * rand(.25,2,1));
+      this.leafGraphic[0].attr({magnitude: magnitude}).attr({wind: 0});
+      this.leafGraphic[1].attr({magnitude: magnitude}).attr({wind: 0});
+      biggestRotation = 0;
+//      console.log('wind started', self.transformation.current.angle, self.transformation.orig.angle);
+      this.leafGraphic.animate({wind: shakes}, wind.duration, 'linear', function() {
+         callback && callback(self.id);
+//         console.log('wind completed', biggestRotation, self.transformation.current.angle, wind);
+      });
    };
 
 
    /** WIND: a wind effect to apply to trees and leaves
     ******************************************************************/
+
+   /**
+    *
+    * @param {int} strength  number between 1 and 10
+    * @param {int} duration  milliseconds
+    * @constructor
+    */
    function Wind(strength, duration) {
       //todo add direction?
       this.strength = strength; //todo
@@ -318,7 +354,7 @@ jQuery(function($) {
       if( newLum && !isNaN(newLum) ) {
          var diff = this.base.lum - this.grad.lum;
          this.base.lum = newLum;
-         this.grad.lum = Math.max(0, Math.min(newLum - diff, 1));
+         this.grad.lum = range(newLum - diff, 0, 1);//Math.max(0, Math.min(newLum - diff, 1));
       }
       return this;
    };
@@ -357,7 +393,7 @@ jQuery(function($) {
     ******************************************************************/
 
    function Transformation(graphic, props) {
-      this.orig = $.extend({
+      this.current = $.extend({
          x: 0,
          y: 0,
          angle: 0,
@@ -365,7 +401,7 @@ jQuery(function($) {
          scaleX: 1
       }, props);
       this.graphic = graphic;
-      this.current = $.extend({}, this.orig);
+      this.checkpoint();
    }
 
    Transformation.prototype.scale = function(scaleX, scaleY) {
@@ -418,24 +454,25 @@ jQuery(function($) {
    };
 
    Transformation.prototype.apply = function() {
+//      console.log('apply', this.toString());
       this.graphic.transform(this.toString());
       return this;
    };
 
    /**
-    * @param {Raphael}   graphic
-    * @param {object}   [moreAnimProps]
-    * @param {int}      [duration]
-    * @param {string}   [easing]
-    * @return {jQuery.Deferred} promise
+    * @param {object}    [moreAnimProps]
+    * @paramm {Function} [callback]
+    * @param {int}       [duration]
+    * @param {string}    [easing]
+    * @return {Transformation} this
     */
-   Transformation.prototype.animate = function(moreAnimProps, duration, easing) {
+   Transformation.prototype.animate = function(moreAnimProps, callback, duration, easing) {
       var args = _transformAnimateArgs($.makeArray(arguments));
-      return $.Deferred(function(def) {
-         this.graphic.animate($.extend({transform: this.toString()}, args.more), args.duration, args.easing, function() {
-            def.resolve();
-         });
-      }).promise();
+//      console.log('animate', this.toString());
+      this.graphic.animate($.extend({transform: this.toString()}, args.more), args.duration, args.easing, function() {
+         args.callback && args.callback();
+      });
+      return this;
    };
 
    /**
@@ -472,6 +509,40 @@ jQuery(function($) {
       else {
          return Math.floor(Math.random() * (max - min + 1)) + min;
       }
+   }
+
+   /**
+    * Create a random number that tends towards the center. The larger the weight, the more it tends to the center.
+    * This behaves according to the bell curve principle by averaging several numbers together.
+    *
+    * @param {number} min
+    * @param {number} max
+    * @param {int}    [weight]
+    * @param {int}    [dec]
+    * @return {Number}
+    */
+   function bellCurve(min, max, weight, dec) {
+      weight > 1 || (weight = 3);
+      dec || (dec = 0);
+      var sum = 0, i = 0;
+      while(i++ < weight) {
+         sum += rand(min, max, dec);
+      }
+      return round(sum/weight, dec);
+   }
+   $.bellCurve = bellCurve;
+
+
+   /**
+    * Ensure a number stays within a given range
+    *
+    * @param {number} num
+    * @param {number} min
+    * @param {number} max
+    * @return {number}
+    */
+   function range(num, min, max) {
+      return Math.max(min, Math.min(max, num));
    }
 
    /**
@@ -607,6 +678,9 @@ jQuery(function($) {
             case 'string':
                out.easing = argList[i];
                break;
+            case 'function':
+               out.callback = argList[i];
+               break;
          }
       }
       return out;
@@ -618,21 +692,25 @@ jQuery(function($) {
 
    // generate the leaves
    var TREE = new Tree(PAPER);
-   for(var i=0; i < 1; i++) {
+   for(var i=0; i < 30; i++) {
       TREE.addLeaf();
    }
 
    //animate the leaves
-   TREE.changeSeason(['-='+Color.defaults.run, 1], 8000, function() {
+   TREE.changeSeason(['-='+Color.defaults.run, 1], 15000, function() {
       //TREE.applyWind(new Wind(.5, 1000));
-      console.log('TREE.changeSeason callback invoked');
+//      console.log('TREE.changeSeason callback invoked');
    });
 
-   setTimeout(function() {
-      TREE.applyWind(new Wind(1, 50), function() {
-         console.log('TREE.applyWind callback invoked');
-      });
-   }, 1000);
+   var lastWind = new Wind(2, 100);
+   setInterval(function() {
+      lastWind = new Wind(range(bellCurve(lastWind.strength-3, lastWind.strength+2, 2), 0, 10), 500);
+      if( lastWind.strength > 0 ) {
+         TREE.applyWind(lastWind/*, function() {
+            console.log('TREE.applyWind callback invoked');
+         }*/);
+      }
+   }, 510);
 
 //   setInterval(function() {
 //      if( rand(1,100) < 25 ) {
