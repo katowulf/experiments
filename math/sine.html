@@ -26,7 +26,7 @@
             display: inline-block;
         }
 
-        #magnitude, #distance {
+        #magnitude, #frequency {
             display: inline-block;
             width: 100px;
             margin-right: 20px;
@@ -40,7 +40,7 @@
         .cf:after { clear: both; }
         .cf { *zoom: 1; }
 
-        #magnitude:after, #distance:after {
+        #magnitude:after, #frequency:after {
 
         }
     </style>
@@ -54,11 +54,11 @@
         jQuery(function($) {
 
             // this method is from http://www.treeblurb.com/dev_math/test05.html
-            function sinePath(sx, sy, distance) {
+            function sinePath(sx, sy, frequency, magnitude) {
                 // sine path from 0 to rads radians scales by sx
 
                 var i,y;
-                var count = 20*distance;
+                var count = 30*frequency;
                 var dx = 2 * Math.PI / count;
                 var x  = 0;
                 var px = sx;
@@ -67,10 +67,10 @@
                 var p = "M"+ px +","+ py;
 
                 for(i = 0; i < count; i++) {
-                    x += dx;
-                    y = Math.sin(x);
+                    x += dx*frequency;
+                    y = Math.sin(x) * magnitude;
 
-                    px += (180.0 / Math.PI) * dx;
+                    px += (180 / Math.PI) * dx;
                     py = sy - Math.floor(sy/2) * y;
 
                     p += "L" + px + "," + py;
@@ -88,20 +88,20 @@
             }
 
             var magnitude = 10;
-            var distance  = 400;
+            var frequency = 1;
 
             function redraw() {
                 PAPER.clear();
 
-                PAPER.path('M20,150 420,150').attr({"stroke": "#999", "stroke-width":1});
+                PAPER.path('M20,150 480,150').attr({"stroke": "#999", "stroke-width":1});
 
-                var path = PAPER.path(sinePath(20, 150, distance)).attr({"stroke": "#009", "stroke-width": 2});
+                var path = PAPER.path(sinePath(20, 150, frequency, magnitude / 10)).attr({"stroke": "#009", "stroke-width": 2});
 //                var path = PAPER.path("m250,20").attr({"stroke": "#009", "stroke-width": 2});
 
                 //path1.animate({path: "M114,100c0,50 100-50 100,0c0,50 -100-50 -100"},5000).attr({"stroke": "#999", "stroke-width":1});
 //                var inc = Math.PI * 2 / 100;
 //                var v, counter = 0;
-//                for(var i=0; i <= distance; i += .01) {
+//                for(var i=0; i <= frequency; i += .01) {
 //                    i = round(i, 2);
 //                    v = magnitude * round(Math.sin(counter)/2, 3);
 //                    counter += inc;
@@ -111,7 +111,7 @@
             $('#magnitude').noUiSlider('init', {
                 knobs: 1,
                 connect: "lower",
-                scale: [1, 100],
+                scale: [1, 20],
                 start: [magnitude],
                 change: function() {
                     magnitude = this.noUiSlider('value')[1];
@@ -120,20 +120,20 @@
                 end: redraw
             });
 
-            $('#distance').noUiSlider('init', {
+            $('#frequency').noUiSlider('init', {
                 knobs: 1,
                 connect: "lower",
-                scale: [50, 400],
-                start: [distance],
+                scale: [1, 20],
+                start: [frequency],
                 change: function() {
-                    distance = this.noUiSlider('value')[1];
-                    this.next('h3').text(distance);
+                    frequency = this.noUiSlider('value')[1];
+                    this.next('h3').text(frequency);
                 },
                 end: redraw
             });
 
             $('#magnitude').next('h3').text(magnitude);
-            $('#distance').next('h3').text(distance);
+            $('#frequency').next('h3').text(frequency);
             redraw();
         });
 
@@ -142,7 +142,7 @@
 <body>
 
 <div class="outer"><span>Magnitude</span><div id="magnitude" class="noUiSlider"></div><h3>10</h3></div>
-<div class="outer"><span>Distance</span><div id="distance" class="noUiSlider"></div><h3>1</h3></div>
+<div class="outer"><span>Frequency</span><div id="frequency" class="noUiSlider"></div><h3>1</h3></div>
 
 <div id="paper"></div>
 
