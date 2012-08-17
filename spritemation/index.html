@@ -12,6 +12,47 @@
             height: 32px;
             background: transparent url(sprite.png) no-repeat 0 0;
         }
+
+        #vertical-sprite {
+            width: 50px;
+            height: 30px;
+            background: transparent url(vertical_sprite.png) no-repeat 0 0;
+            float: left;
+            border: 1px dashed gray;
+        }
+
+        #boid {
+            width: 44px;
+            height: 48px;
+            background: transparent url(boid-small.png) no-repeat 0 0;
+        }
+
+        .outer {
+            margin: 20px;
+        }
+
+        .outer > div, .outer h3, .outer > div, .outer input {
+            display: inline-block;
+            margin-left: 15px;
+        }
+
+        .noUi-handle:hover,
+        .noUi-midBar:hover {
+           cursor: pointer;
+        }
+
+        fieldset {
+            float: left;
+        }
+
+        .clearfix:before,
+        .clearfix:after {
+            content: " "; /* 1 */
+            display: table; /* 2 */
+        }
+        .clearfix:after { clear: both; }
+        .clearfix { *zoom: 1; }
+
     </style>
 
     <script type="text/javascript" src="http://code.jquery.com/jquery-1.8.0.js"></script>
@@ -22,29 +63,65 @@
         jQuery(function($) {
             var value = 0;
 
-            function moveSprite() {
-                $('#sprite').spritemation(value, 1000);
-            }
-
-            $('#amplitude').noUiSlider('init', {
+            $('#step').noUiSlider('init', {
                 knobs: 1,
                 connect: "lower",
                 scale: [0, 10],
-                start: [amplitude],
+                start: [0],
+                step: 1,
                 change: function() {
                     value = this.noUiSlider('value')[1];
                     this.next('h3').text(value);
                 },
-                end: moveSprite
+                end: function() {
+                   var noanimate = $('#noanimate:checked').length;
+                   $('#sprite').spritemation(value, (noanimate? 0 : 200));
+                   $('#vertical-sprite').spritemation(value, (noanimate? 0 : 200));
+                }
+            });
+
+
+            $('#boidStep').noUiSlider('init', {
+                knobs: 1,
+                connect: "lower",
+                scale: [0, 15],
+                start: [0],
+                step: 1,
+                change: function() {
+                    value = this.noUiSlider('value')[1];
+                    this.next('h3').text(value);
+                },
+                end: function() {
+                    $('#boid').spritemation({
+                        start: 0, end: 3,
+                        cycles: ~~$('#boidStep').val(),
+                        callback: function(finalFrame) {
+                           console.log('callback invoked; final frame', finalFrame);
+                        }
+                    });
+                }
             });
         });
     </script>
 </head>
 <body>
 
-   <div class="outer"><span>Amplitude</span><div id="amplitude" class="noUiSlider"></div><h3>10</h3></div>
+<div class="outer"><span>Step</span><div id="step" class="noUiSlider"></div><h3>0</h3><label><input type="checkbox" id="noanimate" /> no animation</label></div>
 
-    <div id="sprite"></div>
+<div class="clearfix">
+    <fieldset>
+        <legend>Horizontal Sprite</legend>
+        <div id="sprite"></div>
+    </fieldset>
+    <fieldset class="clearfix">
+        <legend>Vertical Sprite</legend>
+        <div id="vertical-sprite"></div>
+    </fieldset>
+</div>
+
+<div class="outer"><span>Crow Cycles</span><div id="boidStep" class="noUiSlider"></div><h3>0</h3></div>
+
+<div id="boid"></div>
 
 </body>
 </html>
