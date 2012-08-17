@@ -8,6 +8,7 @@ jQuery(function($) {
    var undef;
 
    // Vector used to create a Leaf
+   // imported from svg using http://readysetraphael.com
    var LeafTemplate = {
       blade: 'm {x},{y} c 0,0 -42.102225,52.269256 -1.607094,80.356389  ' +
          'c 1.403549,0.973489 1.314833,0.46002 3.202805,-0.145135  c 46.265,-14.83 -1.596,-80.211 -1.596,-80.211  z',
@@ -22,7 +23,7 @@ jQuery(function($) {
    // color range for leaves
    Color.defaults = {
       hue: [.301, .38, 3],  // the range for hue of leaves
-      sat: [ .45, .75, 2],  // the range for saturation of leaves
+      sat: [ .75, .95, 2],  // the range for saturation of leaves
       lum: [  .6,  .8, 2],  // the range for luminosity of leaves
       run: .3               // the animation range for a change of seasons
    };
@@ -34,7 +35,7 @@ jQuery(function($) {
       template: LeafTemplate,
       blade: {
          stroke: 'none',
-         'fill-opacity': .9,
+         'fill-opacity': 1,//function() { return bellCurve( .6, .9, 2, 2); }, //debug-redo
          season: function() { return [rand.apply(null, Color.defaults.hue), rand.apply(null, Color.defaults.sat)] }
       },
       stem: {
@@ -44,8 +45,8 @@ jQuery(function($) {
       },
 //      scaleX: function() { return rand(.9, 1.25, 2) }, // if this doesn't match scaleY, the leaf will appear skewed
 //      scaleY: function() { return rand(1, 1.5, 2)   },
-      scaleX: function() { return rand(.35, .7, 2) }, // if this doesn't match scaleY, the leaf will appear skewed
-      scaleY: function() { return rand(.35, .8, 2)   },
+      scaleX: function() { return bellCurve(.4, .7, 2, 2) }, // if this doesn't match scaleY, the leaf will appear skewed
+      scaleY: function() { return bellCurve(.4, .8, 2, 2) },
 
       angle:  function() { return rand(25, 75)      }  // turn the leaf (around the stem's connection point)
    };
@@ -329,8 +330,8 @@ jQuery(function($) {
 
       this.grad = {
          hue: this.base.hue,
-         sat: this.base.sat,
-         lum: rand(this.base.lum - .3, this.base.lum - .5)//Math.max(0, rand(this.base.lum - .5, this.base.lum - .8, 2))
+         sat: range(rand(this.base.sat-.25, this.base.sat -.5, 2), 0, 1),
+         lum: range(rand(this.base.lum - .25, this.base.lum - .5, 2), 0, 1)//Math.max(0, rand(this.base.lum - .5, this.base.lum - .8, 2))
       }
    }
 
@@ -704,7 +705,9 @@ jQuery(function($) {
 
    var lastWind = new Wind(2, 100);
    setInterval(function() {
-      lastWind = new Wind(range(bellCurve(lastWind.strength-3, lastWind.strength+2, 2), 0, 10), 500);
+      var min = Math.max(lastWind.strength-3, -1);
+      var max = Math.min(11, lastWind.strength+2);
+      lastWind = new Wind(range(bellCurve(min, max, 2), 0, 10), 500);
       if( lastWind.strength > 0 ) {
          TREE.applyWind(lastWind/*, function() {
             console.log('TREE.applyWind callback invoked');
