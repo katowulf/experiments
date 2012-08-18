@@ -1,6 +1,8 @@
 
 (function($) {
    /**
+    * DESCRIPTION
+    * -----------
     * The spritemation plugin animates CSS sprites (background images on a DOM element which are larger than the element's
     * viewable portal) through a sequence of frames to create the illusion of transitions or movement.
     *
@@ -10,7 +12,8 @@
     *
     * It can be called in one of two ways: spritemation( endStep, duration ) or spritemation( opts )
     *
-    * Examples:
+    * EXAMPLES
+    * --------
     * <code>
     *    // cycle from frame 0 to frame 10 in 1 second (at 10 fps)
     *    $('#sprite').spritemation( 10, 1000 );
@@ -18,20 +21,21 @@
     *    // or...
     *    $('#sprite').spritemation( { end: 10, fps: 100 } );
     *
-    *    // cycle backward from frame 10 to 1 in 1 second (at 10 fps)
+    *    // cycle backward from frame 10 to 5 in 1 second (at 5 fps)
     *    $('#sprite').spritemation( { start: 10, end: 5 }, 1000 );
     *
     *    // or...
-    *    $('#sprite').spritemation( { start: 10, end: 5, fps: 10 } );
+    *    $('#sprite').spritemation( { start: 10, end: 5, fps: 5 } );
     *
     *    // or...
     *    $('#sprite').spritemation( { start: 10, end: 5, duration: 1000 } );
     *
-    *    // just show the 4th frame without any animation (with duration of zero)
+    *    // skip to the 4th frame without any animation (use duration of zero)
     *    $('#sprite').spritemation( 4, 0 );
-    *
     * </code>
     *
+    * OPTIONS
+    * -------
     *
     * `opts` accepts any of the following arguments:
     *
@@ -39,16 +43,16 @@
     *    {int}      fps        (default=10) how fast should we animate? (frames per second)
     *    {int}      duration   (default=null) how long should we animate? (milliseconds, see below)
     *    {int}      cycles     (default=1) see below
-    *    {string}   cycleType  (default="restart") "restart" or "modulate", see below
+    *    {boolean}  modulate   (default=false) cycles back and forth (see below)
     *    {function} callback  {default=null} executed when animation completes, receives final frame position
+    *    {int}      start       which frame to begin the animation from (defaults to its current position)
     *
     * The spritemation automatically calculates the following arguments. It doesn't probably make sense to
     * override any of them unless you want the animations to act weird, but you could do so as an (unnecessary)
-    * optimization if they happen to be known already.
+    * optimization (if they happen to be known ahead of time):
     *
     *    {int}     frameWidth   the width of the visible pane (of one frame of the sprite image)
     *    {int}     frameHeight  the height of the visible pane (of one frame of the sprite image)
-    *    {int}     start        which frame to begin the animation from
     *    {boolean} vertical     is this sprite vertically oriented?
     *
     * ANIMATION LENGTH AND SPEED
@@ -62,59 +66,63 @@
     *
     * In the case that both exist, `duration` takes precedence, except when using the cycle option (see below).
     *
-    * CYCLING FRAMES
-    * --------------
-    * It's possible to make spritemation "modulate" (go back and forth) through the frames or to "restart" the frames
-    * by using the `cycles` option. Examples:
+    * CYCLIC ANIMATIONS
+    * -----------------
+    * Using `cycles`, it is possible to make spritemation go through the frames more than once. It can `modulate`
+    * (go back and forth) through the frames or restart each time through.
+    *
+    * Examples:
     * <code>
     *    // cycle frames 9-0 (backwards), a total of 10 times (100 frames) in 1 second, starting back at 9 each time 0 is reached
     *    spritemation({ start: 9, end: 0, cycles: 10 }, 1000 );
     *
-    *    // modulate frames 1-10 a total of 5 times each direction (100 frames) in 1 second, reversing from 10-1 before going forward again
-    *    spritemation({ start: 1, end: 10, cycles: 5, cycleType: 'modulate' }, 1000 );
+    *    // modulate frames 0-10 a total of 5 times each direction (100 frames) in 1 second, reversing from 10-0
+    *    // before going forward again
+    *    spritemation({ start: 0, end: 10, cycles: 5, modulate: true }, 1000 );
     * </code>
     *
-    * Note that above we specified the start position, which would override the default. This would automagically happen
-    * if the sprite was already positioned at the correct pixels for frame 9.
+    * Note that above we specified the start positions, which would begin the spritemation by positioning the background
+    * to the start frame. This is not necessary if the sprite is already positioned at the correct frame or we don't
+    * care where it starts from.
     *
-    * @param {object|int} [opts] see above
+    * @param {Object|int} [opts] see above
     * @param {int}        [duration] can also be declared in opts
     */
    $.fn.spritemation = function(opts, duration) {
       return this.each(function() {
-         var $this = $(this);
-         // we may have to load an image to get the args, so wait to resolve
-         // before we continue
-         _getArgs(opts, duration, $this).then(function(args) {
-            var to, it = new CycleIterator(args);
-            if( args.duration === 0 ) {
+         // clear any running sprite animation so when we can run ours immediately (and get accurate starting datum)
+         var $this = $(this).stop('spritemation', true);
+         // we may have to load an image to get the args, so wait for promise to fulfill
+         _getArgs(opts, duration, $this).done($.proxy(function(args) {
+            var $self = $(this), it = new CycleIterator(args);
+            if( args.duration === 0 || args.start == args.end ) {
                // show a frame number without any animation (with duration zero)
-               console.warn('just set frame', args.end);
-               $this.css('background-position', _bgPos(args, args.end));
+               $self.css('background-position', _bgPos(args, args.end));
                if( args.callback ) { args.callback(args.end); }
             }
             else {
-               console.warn('launching spritemation', args);
-               // animate and display the frame
-               if( it.hasNext() ) {
-                  to = setInterval(function() {
-                     var frame = it.next();
-                     console.log({frame: frame, step: 1000/args.fps, args: args});
-                     $this.css('background-position', _bgPos(args, frame));
-                     if( !it.hasNext() ) {
-                        console.timeEnd($this);
-                        clearInterval(to);
-                        if( args.callback ) { args.callback(frame); }
+               var frame, delay = 1000/args.fps, _checkQueue;
+
+               if( args.callback ) {
+                  // a callback to check the queue and see if all the frames have loaded or if clearQueue/stop
+                  // was called, this way we can accurately invoke our callback. We only declare the function
+                  // if a callback is to be invoked, so as to not be wasteful
+                  _checkQueue = function() {
+                     var n = $self.queue('spritemation').length;
+                     if( n === 0 ) {
+                        args.callback(frame);
                      }
-                  }, 1000/args.fps);
-               }
-               else {
-                  if( typeof(console) === 'object' && console.warn ) {
-                     console.warn('nothing to iterate (does start == end?)');
                   }
                }
+
+               // iterate the frames and load them into the queue
+               while(it.hasNext()) {
+                  frame = it.next();
+                  $self.queue('spritemation', _nextFrame($self, _bgPos(args, frame), _checkQueue)).delay(delay, 'spritemation');
+               }
+               $self.dequeue('spritemation');
             }
-         });
+         }, this));
       });
    };
 
@@ -122,23 +130,22 @@
     ******************************************************************/
 
    function CycleIterator(args) {
-      this.start      = Math.min(args.start, args.end);
-      this.end        = Math.max(args.start, args.end);
-      this.frames     = this.end - this.start + 1; // inclusive, so add 1
-      this.modulate   = !!(args.cycleType === 'modulate');
+      this.first      = Math.min(args.start, args.end);
+      this.last        = Math.max(args.start, args.end);
+      this.frames     = this.last - this.first + 1; // inclusive, so add 1
+      this.modulate   = !!(args.modulate);
       this.maxSteps   = this.frames * args.cycles;
       this.direction  = args.start > args.end? -1 : 1;
       this.curStep    = -1;
-      this.curFrame   = this.direction < 0? this.end : this.start;
-      console.log($.extend({}, this), $.makeArray(args));
+      this.curFrame   = this.direction < 0? this.last : this.first;
    }
 
    CycleIterator.prototype.next = function() {
       if( this.hasNext() ) {
          this.curStep++;
          if( this.modulate ) {
-            if( (this.direction > 0 && this.curFrame === this.end)
-                || (this.direction < 0 && this.curFrame === this.start) ) {
+            if( (this.direction > 0 && this.curFrame === this.last)
+                || (this.direction < 0 && this.curFrame === this.first) ) {
                this.direction = -(this.direction);
             }
             this.curFrame = this.curFrame + this.direction;
@@ -146,17 +153,18 @@
          else {
             var amt = this.curStep % this.frames;
             if( this.direction < 0 ) {
-               this.curFrame = this.end - amt;
+               this.curFrame = this.last - amt;
             }
             else {
-               this.curFrame = this.start + amt;
+               this.curFrame = this.first + amt;
             }
          }
-         console.log('next()', this.curFrame);
          return this.curFrame;
       }
       else {
-         console.error('next() called after last frame');
+         if( typeof(console) === 'object' && console.warn ) {
+            console.warn('CycleIterator.next() called after last element; that was probably a mistake');
+         }
          return false;
       }
    };
@@ -167,22 +175,41 @@
 
    CycleIterator.prototype.reset = function() {
       this.curStep = -1;
-      this.curFrame = this.direction < 0? this.end : this.start;
+      this.curFrame = this.direction < 0? this.last : this.first;
    };
 
    /** UTILITIES
     ******************************************************************/
 
+   /**
+    * @param {jQuery}   $this
+    * @param {string}   bgPos
+    * @param {function} [callback]
+    * @return {Function}
+    * @private
+    */
+   function _nextFrame($this, bgPos, callback) {
+      return function( next ) {
+         $this.css('background-position', bgPos);
+         next();
+         callback && callback();
+      };
+   }
+
    function _getArgs(opts, duration, $this) {
+      // we defer returning arguments because we may need to load an image to determine background width/height
+      // which is asynchronous
       return $.Deferred(function(def) {
+         // cache the costly calculations so calling spritemation scales well
          var cache = $this.data('spritemation');
 
          // opts might be an integer value
          if( opts && typeof(opts) !== 'object' ) { opts = {end: ~~opts}; }
          // or opts might not even exist
          else if( !opts ) { opts = {}; }
+
          // duration might be declared as another arg or in opts
-         if( typeof(duration) === 'number' || typeof(duration) === 'string' ) { opts.duration = ~~duration; }
+         if( !(duration in opts) && typeof(duration) in {number: 1, string: 1} ) { opts.duration = ~~duration; }
 
          // apply the defaults, override with any declared options
          var undef, args = $.extend({
@@ -198,11 +225,12 @@
 
          function _resolveArgs(isVertical) {
             args.vertical = isVertical;
-            if( !args.frameWidth ) { args.frameWidth = $this.outerWidth(); }
-            if( !args.frameHeight ) { args.frameHeight = $this.outerHeight(); }
+            if( !args.frameWidth ) { args.frameWidth = $this.innerWidth(); }
+            if( !args.frameHeight ) { args.frameHeight = $this.innerHeight(); }
             if( args.start === undef ) {
+               // we can't cache this because it changes every time the sprite shifts frames
+               //todo but we could cache the bgOffset for each frame!
                args.start = _calcBgOffset($this, args.frameHeight, args.frameWidth, args.vertical);
-               console.log('calculating start', args.start);
             }
 
             var span = Math.abs(args.end - args.start)+1; // inclusive, so add 1
@@ -213,17 +241,14 @@
                var frames = span * args.cycles;
 
                // if we are going to modulate, then the total steps is doubled (we come back once for each cycle)
-               if( args.cycleType === 'modulate' ) { frames *= 2; }
+               if( args.modulate ) { frames *= 2; }
 
-               // teh maths: a second, divided by the duration times number of steps
-               opts.fps = Math.round( 1000 / duration * frames );
-            }
-            else if( args.duration !== 0 ) {
-               // teh maths: duration is the length of a frame (1000/fps) times number of frames (span) times number of cycles
-               args.duration = (1000 / opts.fps) * span * args.cycles * (args.cycleType === 'modulate'? 2 : 1);
+               // teh maths: fps = frames / duration * 1000
+               args.fps = Math.round( frames / duration * 1000 );
             }
 
             if( !cache ) {
+               // cache the costly calculations so calling spritemation scales well
                $this.data('spritemation', {
                   frameHeight: args.frameHeight,
                   frameWidth: args.frameWidth,
@@ -235,6 +260,8 @@
          }
 
          if( 'vertical' in opts ) {
+            // if the vertical/horizontal orientation of the sprite has been specified by caller, there is no reason
+            // to bother fetching it, so go ahead and resolve right now.
             _resolveArgs(opts.vertical);
          }
          else {
@@ -249,27 +276,17 @@
       return $.Deferred(function(def) {
          var imgUrl = $e.css('background-image');//, $img = $('<img />');
          $('<img />').hide().appendTo('body').on('load', function() {
-            console.log('image loaded', $(this).height(), $(this).width(), imgUrl.substr(5, imgUrl.length-7));
             def.resolve($(this).height() > $(this).width());
             $(this).remove();
          }).attr('src', imgUrl.substr(5, imgUrl.length-7));
-
-   //      $img.attr('src', imgUrl.substr(5, imgUrl.length-7));
-   //      console.log(imgUrl.substr(5, imgUrl.length-7), $img.height(), $img.width());
-   //      $img.load(function() {
-   //         console.log('loaded', imgUrl.substr(5, imgUrl.length-7), $img.height(), $img.width());
-   //      });
-
       });
    }
 
    function _bgPos(args, step) {
       return [
-         (args.vertical? 0 : _calcBgPx(args, step, false)),
-         'px',
+         (args.vertical? 0 : _calcBgPx(args, step, false))+'px',
          ' ',
-         (args.vertical? _calcBgPx(args, step, true) : 0),
-         'px'
+         (args.vertical? _calcBgPx(args, step, true)+'px' : 0),
       ].join('');
    }
 
@@ -278,11 +295,9 @@
    }
 
    function _calcBgOffset($e, h, w, vertical) {
-      var bgPos = $e.css('background-position'), side = vertical? h : w;
-      console.log(bgPos);
+      var bgPos = $e.css('background-position'), side = vertical? h : w, idx = vertical? 2 : 1;
       var m = bgPos && bgPos.match(/^(-?[0-9]+(?:px|em|%)?) ?(-?[0-9]+(?:px|em|%)?)?$/);
-      console.log('_calcBgOffset', {m: m, px: $.UnitConverter.px($e, m[2]), side: side});
-      return m? Math.floor(Math.abs( $.UnitConverter.px($e, m[2]) / side )) : 0;
+      return m? Math.floor(Math.abs( $.UnitConverter.px($e, m[idx]) / side )) : 0;
    }
 
    /**
