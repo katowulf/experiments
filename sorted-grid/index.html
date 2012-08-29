@@ -1,0 +1,127 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <title>Isotope Test</title>
+    <link rel="stylesheet" href="isotope.css" />
+    <style type="text/css">
+        * { -moz-box-sizing: border-box; -webkit-box-sizing: border-box; box-sizing: border-box; }
+
+        fieldset { margin: 10px; padding: 2px; float: left; }
+        label { display: block; float: left; padding: 5px 15px 5px 0; border-radius: 5px; }
+        label:hover {
+            background-color: #eef;
+            cursor: pointer;
+        }
+        label:hover input {
+            border: 1px solid blue;
+        }
+
+        ul { list-style-type: none; }
+        li { width: 100px; height: 100px; margin: 10px; }
+
+        li:hover {
+            border: 3px solid black;
+        }
+
+        .square { }
+        .circle {
+            border-radius: 50px;
+        }
+        .triangle { position: relative; }
+        .triangle:before {
+            content: " ";
+            width: 0;
+            height: 0;
+            position: absolute;
+            left: 0;
+            top: 0;
+            border-style: solid;
+            border-width: 50px 100px;
+        }
+
+        .red    { background-color: red; }
+        .blue   { background-color: blue; }
+        .yellow { background-color: yellow; }
+        .green  { background-color: green; }
+        .purple { background-color: purple; }
+
+        .triangle { background-color: transparent; }
+        .triangle.red:before    { border-color: transparent transparent transparent red; }
+        .triangle.blue:before   { border-color: transparent transparent transparent blue; }
+        .triangle.yellow:before { border-color: transparent transparent transparent yellow; }
+        .triangle.green:before  { border-color: transparent transparent transparent green; }
+        .triangle.purple:before { border-color: transparent transparent transparent purple; }
+
+        .tall { height: 200px; }
+        .triangle.tall:before { border-width: 100px 100px; }
+
+        .wide { width: 200px; }
+        .triangle.wide:before { border-width: 50px 200px; }
+
+        /* clearfix */
+        .cf:before,
+        .cf:after {
+            content: " "; /* 1 */
+            display: table; /* 2 */
+        }
+        .cf:after { clear: both; }
+        .cf { *zoom: 1; }
+
+    </style>
+
+    <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.js"></script>
+    <script type="text/javascript" src="../lib/isotope/jquery.isotope.js"></script>
+    <script type="text/javascript">
+
+        jQuery(function($) {
+            var COLORS = ['red', 'blue', 'yellow', 'green', 'purple'];
+            var SHAPES = ['circle', 'rectangle', 'triangle', 'rectangle'];
+            var SIZES  = ['tall', 'wide', 'square'];
+            var $grid  = $('#grid'), $options = $('#options');
+
+            var i = COLORS.length*4, j = 0, k = 0, c;
+            while(i--) {
+                j++; k++;
+                c = [ COLORS[i%COLORS.length], SHAPES[j%SHAPES.length], SIZES[k%SIZES.length] ].join(' ');
+                $grid.append('<li class="'+c+'"></li>');
+            }
+
+            $('#grid').isotope({
+                itemSelector : '#grid > li',
+//                layoutMode: 'masonryHorizontal',
+//                masonryHorizontal: { rowHeight: 10 }
+                masonry: { columnWidth: 10 }
+            });
+
+            $.each({'COLORS': COLORS, 'SHAPES': SHAPES, 'SIZES': SIZES}, function(k, set) {
+                var len = set.length, i = -1, v;
+                var $set = $('<fieldset><legend>'+k+'</legend></fieldset>').appendTo('#options');
+                while(++i < len) {
+                    v = set[i];
+                    $('<label></label>').append(
+                        $('<input type="checkbox" id="'+k+'-'+v+'" value="'+v+'" checked="checked" />').click(filterGrid)
+                    ).append(v).appendTo($set);
+                }
+            });
+
+            function filterGrid() {
+                var inactive = [];
+                $('fieldset input[type=checkbox]:not(:checked)').each(function() {
+                    inactive.push(':not(.'+$(this).val()+')');
+                });
+                console.log(inactive.join(''));
+                $('#grid').isotope({filter: inactive.join('')});
+            }
+        });
+
+    </script>
+</head>
+<body>
+
+<div id="options" class="cf"></div>
+
+<ul id="grid"></ul>
+
+</body>
+</html>
